@@ -13,6 +13,7 @@ import omni.usd
 cubes = []
 def remove_cubes(stage:Stage):
     for cube_path in cubes:
+        print("   -", cube_path)
         if stage.GetPrimAtPath(cube_path):
             stage.RemovePrim(cube_path)
     cubes.clear()
@@ -34,23 +35,27 @@ def on_slider_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.U
     global cubes
     space = space_slider.model.get_value_as_float()*100
     stage:Stage = omni.usd.get_context().get_stage()
+    print("Removing Cubes:", len(cubes))
     remove_cubes(stage)
 
     x_count = x_slider.model.get_value_as_int()
     y_count = y_slider.model.get_value_as_int()
     z_count = z_slider.model.get_value_as_int()
+
+    selected_xform = stage.GetPrimAtPath(omni.usd.get_context().get_selection().get_selected_prim_paths()[0])
+
     for i in range(x_count):
         x = i*100+space*i
         for j in range(y_count):
             y = j*100+space*j
             for k in range(z_count):
-                new_path = f'/World/Cube_{str(len(cubes)).rjust(4,"0")}'
-                cube_prim: UsdGeom.Cube = UsdGeom.Cube.Define(stage,new_path)
+                new_path = f'Cube_{str(len(cubes)).rjust(4,"0")}'
+                cube_prim: UsdGeom.Cube = UsdGeom.Cube.Define(stage,selected_xform.GetPath().AppendPath(new_path))
 
                 cube_prim.AddTranslateOp().Set(Gf.Vec3d(x, y, k*100+space*k))
                 cube_prim.AddScaleOp().Set(Gf.Vec3d(50, 50, 50))
 
-                cubes.append(new_path)
+                cubes.append(cube_prim.GetPath())
 
 
 class MyExtension(omni.ext.IExt):
