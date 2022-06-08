@@ -1,5 +1,5 @@
 # Cube Array Sample Extension
-![Cube Array Sample Preview](data/preview.png)
+![Cube Array Sample Preview](../data/preview.png)
 
 ## Adding This Extension
 
