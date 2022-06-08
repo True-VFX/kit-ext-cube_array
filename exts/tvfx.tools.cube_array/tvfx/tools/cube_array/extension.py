@@ -39,7 +39,10 @@ def on_slider_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.U
     global cubes
     space = space_slider.model.get_value_as_float()*100
     stage:Stage = omni.usd.get_context().get_stage()
-    selected_xform = xform or stage.GetPrimAtPath(omni.usd.get_context().get_selection().get_selected_prim_paths()[0])
+    selection = omni.usd.get_context().get_selection()
+    if not selection:
+        return
+    selected_xform = xform or stage.GetPrimAtPath(selection.get_selected_prim_paths()[0])
 
     if not selected_xform or selected_xform.GetTypeName() != "Xform":
         return
@@ -89,7 +92,12 @@ def on_space_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UI
     global cubes
     space = space_slider.model.get_value_as_float()*100
     stage:Stage = omni.usd.get_context().get_stage()
-    selected_xform = xform or stage.GetPrimAtPath(omni.usd.get_context().get_selection().get_selected_prim_paths()[0])
+    
+    selection = omni.usd.get_context().get_selection()
+    if not selection:
+        return
+
+    selected_xform = xform or stage.GetPrimAtPath(selection.get_selected_prim_paths()[0])
 
     cubes_list:list = cubes.get(str(selected_xform.GetPath()))
     if not cubes_list:
