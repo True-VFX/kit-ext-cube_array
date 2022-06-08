@@ -35,87 +35,81 @@ def create_uint_slider(axis:str, min=0, max=10, default=1) -> ui.UIntSlider:
     return slider
 
 def on_slider_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UIntSlider, space_slider:ui.UIntSlider, _b:float, xform:UsdGeom.Xform=None):
-    # tot = dt()
     global cubes
+    # Get Active Prim
     space = space_slider.model.get_value_as_float()*100
     stage:Stage = omni.usd.get_context().get_stage()
-    selection = omni.usd.get_context().get_selection()
+    selection = omni.usd.get_context().get_selection().get_selected_prim_paths()
     if not selection:
         return
-    selected_xform = xform or stage.GetPrimAtPath(selection.get_selected_prim_paths()[0])
-
+    selected_xform = xform or stage.GetPrimAtPath(selection[0])
+    
+    # Ensure only to array under Xforms
     if not selected_xform or selected_xform.GetTypeName() != "Xform":
         return
 
+    # Remove Existing Cubes: Could be optimized
     cubes_list:list = cubes.get(str(selected_xform.GetPath()))
     if not cubes_list:
         cubes_list = cubes[str(selected_xform.GetPath())] = []
     remove_cubes(stage, cubes_list)
 
+    # Get XYZ values
     x_count = x_slider.model.get_value_as_int()
     y_count = y_slider.model.get_value_as_int()
     z_count = z_slider.model.get_value_as_int()
 
-    # crt = 0
-    # trns = 0
-    # apnd = 0
-
+    # Create Cube Array
     for i in range(x_count):
         x = i*100+space*i
         for j in range(y_count):
             y = j*100+space*j
             for k in range(z_count):
-                a = i
                 b = j*x_count
                 c = k*y_count*x_count
-                n = (a+b+c)
-                # st = dt()
+                n = (i+b+c)
                 new_path = f'Cube_{str(n).rjust(4,"0")}'
                 cube_prim: UsdGeom.Cube = UsdGeom.Cube.Define(stage,selected_xform.GetPath().AppendPath(new_path))
-                # crt += dt() - st
 
-                # st = dt()
                 UsdGeom.XformCommonAPI(cube_prim).SetTranslate((x, y, k*100+space*k))
                 cube_prim.GetSizeAttr().Set(100.0)
-                # trns += dt() - st
 
-                # st = dt()
                 cubes_list.append(cube_prim.GetPath())
-                # apnd += dt() - st
-    # print(f"Total: {round(dt() - tot,2)}")
-    # print(f"  - Create:    {round(crt,2)}")
-    # print(f"  - Transform: {round(trns,2)}")
-    # print(f"  - Append:    {round(apnd,2)}")
 
 def on_space_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UIntSlider, space_slider:ui.UIntSlider, _b:float, xform:UsdGeom.Xform=None):
-    tot = dt()
     global cubes
     space = space_slider.model.get_value_as_float()*100
     stage:Stage = omni.usd.get_context().get_stage()
     
-    selection = omni.usd.get_context().get_selection()
+    # Get Active Selection
+    selection = omni.usd.get_context().get_selection().get_selected_prim_paths()
     if not selection:
         return
+    selected_xform = xform or stage.GetPrimAtPath(selection[0])
 
-    selected_xform = xform or stage.GetPrimAtPath(selection.get_selected_prim_paths()[0])
+    # Ensure Xform
+    if not selected_xform or selected_xform.GetTypeName() != "Xform":
+        return
+
 
     cubes_list:list = cubes.get(str(selected_xform.GetPath()))
     if not cubes_list:
         return
 
+    # Get XYZ Values
     x_count = x_slider.model.get_value_as_int()
     y_count = y_slider.model.get_value_as_int()
     z_count = z_slider.model.get_value_as_int()
 
+    # Translate Cubes
     for i in range(x_count):
         x = i*100+space*i
         for j in range(y_count):
             y = j*100+space*j
             for k in range(z_count):
-                a = i
                 b = j*x_count
                 c = k*y_count*x_count
-                n = (a+b+c)
+                n = (i+b+c)
                 new_path = f'Cube_{str(n).rjust(4,"0")}'
                 cube_prim:Usd.Prim = stage.GetPrimAtPath(selected_xform.GetPath().AppendPath(new_path))
 
@@ -129,6 +123,7 @@ class MyExtension(omni.ext.IExt):
         self._window = ui.Window("My Window", width=300, height=300)
         with self._window.frame:
             with ui.VStack():
+                # Create Slider Row
                 with ui.HStack(height=20):
                     x_slider = create_uint_slider("X")
                     y_slider = create_uint_slider("Y")
@@ -141,12 +136,14 @@ class MyExtension(omni.ext.IExt):
                     space_slider.model.set_value(0.5)
                     space_field = ui.FloatField(width=30)
                     space_field.model = space_slider.model
-                    
+                
+                # Add Functions on Change
                 x_slider.model.add_value_changed_fn(partial(on_slider_change, x_slider,y_slider,z_slider,space_slider))
                 y_slider.model.add_value_changed_fn(partial(on_slider_change, x_slider,y_slider,z_slider,space_slider))
                 z_slider.model.add_value_changed_fn(partial(on_slider_change, x_slider,y_slider,z_slider,space_slider))
                 space_slider.model.add_value_changed_fn(partial(on_space_change, x_slider,y_slider,z_slider,space_slider))
-            
+
+                # Create Array Xform Button
                 def create_array_holder(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UIntSlider, space_slider:ui.UIntSlider):
                     C:omni.usd.UsdContext = omni.usd.get_context()
                     stage:Stage = C.get_stage()
