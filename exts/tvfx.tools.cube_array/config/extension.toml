@@ -1,0 +1,29 @@
+[package]
+version = "1.0.0"
+authors = ["True-VFX: Zach Eastin"]
+
+title = "Simple Cube Array Creator"
+description="Creates a simple 3D array of cubes"
+category = "Tools"
+
+readme  = "docs/README.md"
+
+repository = "https://github.com/True-VFX/kit-ext-cube_array"
+
+preview_image = "data/preview.png"
+icon = "data/icon.svg"
+
+changelog="docs/CHANGELOG.md"
+
+
+# Keywords for the extension
+keywords = ["kit", "zach", "cube", "array","true-vfx", "tvfx"]
+
+
+# Use omni.ui to build simple UI
+[dependencies]
+"omni.kit.uiapp" = {}
+
+# Main python module this extension provides, it will be publicly available as "import omni.hello.world".
+[[python.module]]
+name = "tvfx.tools.cube_array"
