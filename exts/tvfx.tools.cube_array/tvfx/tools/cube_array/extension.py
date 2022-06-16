@@ -1,6 +1,6 @@
 from functools import partial
 
-from pxr import Gf, UsdGeom, Usd
+from pxr import UsdGeom, Usd, Sdf, Gf
 from pxr.Usd import Stage
 
 import omni.ext
@@ -8,17 +8,13 @@ import omni.kit.commands
 import omni.ui as ui
 import omni.usd
 
-from timeit import default_timer as dt
 
 # PYTHON 3.7.12
 cubes = {}
 def remove_cubes(stage:Stage, cube_list:list):
     if not cube_list:
         return
-
-    for cube_path in cube_list:
-        if stage.GetPrimAtPath(cube_path):
-            stage.RemovePrim(cube_path)
+    omni.kit.commands.execute("DeletePrims", paths=cube_list)
     cube_list.clear()
 
 def create_uint_slider(axis:str, min=0, max=10, default=1) -> ui.UIntSlider:
@@ -43,9 +39,9 @@ def on_slider_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.U
     if not selection:
         return
     selected_xform = xform or stage.GetPrimAtPath(selection[0])
-    
+
     # Ensure only to array under Xforms
-    if not selected_xform or selected_xform.GetTypeName() != "Xform":
+    if not selected_xform:
         return
 
     # Remove Existing Cubes: Could be optimized
@@ -60,21 +56,27 @@ def on_slider_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.U
     z_count = z_slider.model.get_value_as_int()
 
     # Create Cube Array
-    for i in range(x_count):
-        x = i*100+space*i
-        for j in range(y_count):
-            y = j*100+space*j
-            for k in range(z_count):
-                b = j*x_count
-                c = k*y_count*x_count
-                n = (i+b+c)
-                new_path = f'Cube_{str(n).rjust(4,"0")}'
-                cube_prim: UsdGeom.Cube = UsdGeom.Cube.Define(stage,selected_xform.GetPath().AppendPath(new_path))
+    session_layer = stage.GetRootLayer()
+    with Usd.EditContext(stage, session_layer):
+        with Sdf.ChangeBlock():
+            for i in range(x_count):
+                x = i*100+space*i
+                for j in range(y_count):
+                    y = j*100+space*j
+                    for k in range(z_count):
+                        b = j*x_count
+                        c = k*y_count*x_count
+                        n = (i+b+c)
+                        new_path = f'Cube_{str(n).rjust(4,"0")}'
 
-                UsdGeom.XformCommonAPI(cube_prim).SetTranslate((x, y, k*100+space*k))
-                cube_prim.GetSizeAttr().Set(100.0)
-
-                cubes_list.append(cube_prim.GetPath())
+                        cube = session_layer.GetPrimAtPath(selected_xform.GetPath().AppendPath(new_path)) or Sdf.PrimSpec(session_layer.GetPrimAtPath(selected_xform.GetPath()), new_path, Sdf.SpecifierDef, "Cube")
+                        pos = session_layer.GetAttributeAtPath(f"{selected_xform.GetPath().AppendPath(new_path)}.xformOp:translate") or Sdf.AttributeSpec(cube, "xformOp:translate", Sdf.ValueTypeNames.Double3)
+                        pos.default = Gf.Vec3d(x, y, k*100+space*k)
+                        size = session_layer.GetAttributeAtPath(f"{selected_xform.GetPath().AppendPath(new_path)}.size") or Sdf.AttributeSpec(cube, "size", Sdf.ValueTypeNames.Double)
+                        size.default = 100.0
+                        op_order = session_layer.GetAttributeAtPath(f"{selected_xform.GetPath().AppendPath(new_path)}.xformOpOrder") or Sdf.AttributeSpec(cube, "xformOpOrder", Sdf.ValueTypeNames.TokenArray)
+                        op_order.default  = ["xformOp:translate"]
+                        cubes_list.append(cube.path)
 
 def on_space_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UIntSlider, space_slider:ui.UIntSlider, _b:float, xform:UsdGeom.Xform=None):
     global cubes
@@ -88,7 +90,7 @@ def on_space_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UI
     selected_xform = xform or stage.GetPrimAtPath(selection[0])
 
     # Ensure Xform
-    if not selected_xform or selected_xform.GetTypeName() != "Xform":
+    if not selected_xform:
         return
 
 
@@ -102,18 +104,21 @@ def on_space_change(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UI
     z_count = z_slider.model.get_value_as_int()
 
     # Translate Cubes
-    for i in range(x_count):
-        x = i*100+space*i
-        for j in range(y_count):
-            y = j*100+space*j
-            for k in range(z_count):
-                b = j*x_count
-                c = k*y_count*x_count
-                n = (i+b+c)
-                new_path = f'Cube_{str(n).rjust(4,"0")}'
-                cube_prim:Usd.Prim = stage.GetPrimAtPath(selected_xform.GetPath().AppendPath(new_path))
+    session_layer = stage.GetRootLayer()
+    with Usd.EditContext(stage, session_layer):
+        with Sdf.ChangeBlock():
+            for i in range(x_count):
+                x = i*100+space*i
+                for j in range(y_count):
+                    y = j*100+space*j
+                    for k in range(z_count):
+                        b = j*x_count
+                        c = k*y_count*x_count
+                        n = (i+b+c)
+                        new_path = f'Cube_{str(n).rjust(4,"0")}'
+                        cube_prim:Usd.Prim = stage.GetPrimAtPath(selected_xform.GetPath().AppendPath(new_path))
 
-                UsdGeom.XformCommonAPI(cube_prim).SetTranslate((x, y, k*100+space*k))
+                        UsdGeom.XformCommonAPI(cube_prim).SetTranslate((x, y, k*100+space*k))
                 
 
 class MyExtension(omni.ext.IExt):
@@ -147,13 +152,15 @@ class MyExtension(omni.ext.IExt):
                 def create_array_holder(x_slider:ui.UIntSlider,y_slider:ui.UIntSlider,z_slider:ui.UIntSlider, space_slider:ui.UIntSlider):
                     C:omni.usd.UsdContext = omni.usd.get_context()
                     stage:Stage = C.get_stage()
-                    xform:UsdGeom.Xform = UsdGeom.Xform.Define(stage, stage.GetDefaultPrim().GetPath().AppendPath("Cube_Array"))
-                    omni.kit.commands.execute(
-                        'SelectPrimsCommand',
-                        old_selected_paths=[],
-                        new_selected_paths=[str(xform.GetPath())],
-                        expand_in_stage=True
-                    )
+                    session_layer = stage.GetRootLayer()
+                    with Usd.EditContext(stage, session_layer):
+                        xform:UsdGeom.Xform = UsdGeom.Xform.Define(stage, stage.GetDefaultPrim().GetPath().AppendPath("Cube_Array"))
+                        omni.kit.commands.execute(
+                            'SelectPrimsCommand',
+                            old_selected_paths=[],
+                            new_selected_paths=[str(xform.GetPath())],
+                            expand_in_stage=True
+                        )
 
                     on_slider_change(x_slider, y_slider, z_slider, space_slider,None, xform=xform)
                 create_array_button = ui.Button(text="Create Array")
@@ -162,6 +169,8 @@ class MyExtension(omni.ext.IExt):
     def on_shutdown(self):
         global cubes
         print("[tvfx.tools.cube_array] MyExtension shutdown")
+        self._window.destroy()
+        self._window = None
         stage:Stage = omni.usd.get_context().get_stage()
         for key in cubes:
             remove_cubes(stage, cubes[key])
