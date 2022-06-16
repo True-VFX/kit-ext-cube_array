@@ -145,6 +145,7 @@ class MyExtension(omni.ext.IExt):
                         old_selected_paths=[],
                         new_selected_paths=[str(cube_array.GetPath())],
                         expand_in_stage=True
+                    )
 
                     on_slider_change(x_slider, y_slider, z_slider, space_slider,None, xform=cube_array)
                 create_array_button = ui.Button(text="Create Array")
