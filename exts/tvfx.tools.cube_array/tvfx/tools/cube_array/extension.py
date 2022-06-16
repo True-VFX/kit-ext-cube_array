@@ -1,6 +1,6 @@
 from functools import partial
 
-from pxr import Gf, UsdGeom, Usd
+from pxr import UsdGeom, Usd, Sdf, Gf
 from pxr.Usd import Stage
 
 import omni.ext
@@ -8,7 +8,6 @@ import omni.kit.commands
 import omni.ui as ui
 import omni.usd
 
-from timeit import default_timer as dt
 
 # PYTHON 3.7.12
 
@@ -146,7 +145,6 @@ class MyExtension(omni.ext.IExt):
                         old_selected_paths=[],
                         new_selected_paths=[str(cube_array.GetPath())],
                         expand_in_stage=True
-                    )
 
                     on_slider_change(x_slider, y_slider, z_slider, space_slider,None, xform=cube_array)
                 create_array_button = ui.Button(text="Create Array")
@@ -154,4 +152,6 @@ class MyExtension(omni.ext.IExt):
 
     def on_shutdown(self):
         print("[tvfx.tools.cube_array] MyExtension shutdown")
+        self._window.destroy()
+        self._window = None
         stage:Stage = omni.usd.get_context().get_stage()
